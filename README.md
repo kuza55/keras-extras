@@ -1,2 +1,2 @@
 # keras-extras
-Extra batteries for Keras
+Extra batteries for Keras with TensorFlow backend
