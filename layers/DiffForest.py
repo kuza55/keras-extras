@@ -10,19 +10,19 @@ class DiffForest(Layer):
         self.n_trees = n_trees
         self.n_depth = n_depth
 
-        def norm(scale):
+        def uniform(scale):
           return lambda shape, name=None: initializations.uniform(shape, scale=scale, name=name)
 
         #Not clear if these are generally good initializations
         #Or if they are just good for MNIST
 
         if d_init is None:
-          self.d_init = norm(1)
+          self.d_init = uniform(1)
         else:
           self.d_init = initializations.get(init)
 
         if l_init is None:
-          self.l_init = norm(2)
+          self.l_init = uniform(2)
         else:
           self.l_init = initializations.get(init)
 
