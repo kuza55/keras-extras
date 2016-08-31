@@ -51,8 +51,7 @@ class DiffForest(Layer):
         leaf_p_e = []
         for w_d, w_l in zip(self.w_d_ensemble, self.w_l_ensemble):
 
-            #Move sigmoid into output space 0-1
-            decision_p = (K.sigmoid((K.dot(x, w_d))) + 1) /2
+            decision_p = K.sigmoid((K.dot(x, w_d)))
             leaf_p = K.softmax(w_l)
 
             decision_p_comp = 1 - decision_p
