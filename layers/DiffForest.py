@@ -5,24 +5,28 @@ import numpy as np
 import tensorflow as tf
 
 class DiffForest(Layer):
-    def __init__(self, output_classes, n_trees=5, n_depth=3, d_init=None, l_init=None, name='diff_forest', **kwargs):
+    def __init__(self, output_classes, n_trees=5, n_depth=3,
+            d_init=None, l_init=None, randomize_training=0,
+            name='diff_forest', **kwargs):
+
         self.output_classes = output_classes
         self.n_trees = n_trees
         self.n_depth = n_depth
+        self.randomize_training = randomize_training
 
-        def uniform(scale):
+        def norm(scale):
           return lambda shape, name=None: initializations.uniform(shape, scale=scale, name=name)
 
         #Not clear if these are generally good initializations
         #Or if they are just good for MNIST
 
         if d_init is None:
-          self.d_init = uniform(1)
+          self.d_init = norm(1)
         else:
           self.d_init = initializations.get(init)
 
         if l_init is None:
-          self.l_init = uniform(2)
+          self.l_init = norm(2)
         else:
           self.l_init = initializations.get(init)
 
@@ -35,11 +39,29 @@ class DiffForest(Layer):
         N_DECISION = (2 ** (self.n_depth)) - 1  # Number of decision nodes
         N_LEAF  = 2 ** (self.n_depth + 1)  # Number of leaf nodes
 
+        if self.randomize_training:
+            #Construct a mask that lets N trees get trained per minibatch
+            train_mask = np.zeros(self.n_trees, dtype=np.int8)
+            for i in xrange(self.randomize_training):
+                train_mask[i] = 1
+            self.random_mask = tf.random_shuffle(tf.constant(train_mask))
+
         self.w_d_ensemble = []
         self.w_l_ensemble = []
         for i in xrange(self.n_trees):
-            self.w_d_ensemble.append(self.d_init((input_dim, N_DECISION)))
-            self.w_l_ensemble.append(self.l_init((N_LEAF, self.output_classes)))
+            decision_weights = self.d_init((input_dim, N_DECISION))
+            leaf_distributions = self.l_init((N_LEAF, self.output_classes))
+
+            if self.randomize_training:
+                do_gradient = self.random_mask[i]
+                no_gradient = 1 - do_gradient
+                #This should always allow inference, but block gradient flow when do_gradient = 0 
+                decision_weights = do_gradient * decision_weights + no_gradient * tf.stop_gradients(decision_weights)
+
+                leaf_distributions = do_gradient * leaf_distributions + no_gradient * tf.stop_gradients(leaf_distributions)
+
+            self.w_d_ensemble.append(decision_weights)
+            self.w_l_ensemble.append(leaf_distributions)
 
         self.trainable_weights = self.w_d_ensemble + self.w_l_ensemble
 
