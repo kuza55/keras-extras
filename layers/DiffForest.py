@@ -13,6 +13,7 @@ class DiffForest(Layer):
         self.n_trees = n_trees
         self.n_depth = n_depth
         self.randomize_training = randomize_training
+        self.name = name
 
         def norm(scale):
           return lambda shape, name=None: initializations.uniform(shape, scale=scale, name=name)
@@ -50,8 +51,8 @@ class DiffForest(Layer):
         self.w_l_ensemble = []
         self.trainable_weights = []
         for i in xrange(self.n_trees):
-            decision_weights = self.d_init((input_dim, N_DECISION))
-            leaf_distributions = self.l_init((N_LEAF, self.output_classes))
+            decision_weights = self.d_init((input_dim, N_DECISION), name=self.name+"_tree"+i+"_dW")
+            leaf_distributions = self.l_init((N_LEAF, self.output_classes), name=self.name+"_tree"+i+"_lW")
 
             self.trainable_weights.append(decision_weights)
             self.trainable_weights.append(leaf_distributions)
