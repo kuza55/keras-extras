@@ -41,29 +41,32 @@ class DiffForest(Layer):
 
         if self.randomize_training:
             #Construct a mask that lets N trees get trained per minibatch
-            train_mask = np.zeros(self.n_trees, dtype=np.int8)
+            train_mask = np.zeros(self.n_trees, dtype=np.float32)
             for i in xrange(self.randomize_training):
                 train_mask[i] = 1
             self.random_mask = tf.random_shuffle(tf.constant(train_mask))
 
         self.w_d_ensemble = []
         self.w_l_ensemble = []
+        self.trainable_weights = []
         for i in xrange(self.n_trees):
             decision_weights = self.d_init((input_dim, N_DECISION))
             leaf_distributions = self.l_init((N_LEAF, self.output_classes))
 
+            self.trainable_weights.append(decision_weights)
+            self.trainable_weights.append(leaf_distributions)
+
             if self.randomize_training:
                 do_gradient = self.random_mask[i]
                 no_gradient = 1 - do_gradient
+                
                 #This should always allow inference, but block gradient flow when do_gradient = 0 
-                decision_weights = do_gradient * decision_weights + no_gradient * tf.stop_gradients(decision_weights)
+                decision_weights = do_gradient * decision_weights + no_gradient * tf.stop_gradient(decision_weights)
 
-                leaf_distributions = do_gradient * leaf_distributions + no_gradient * tf.stop_gradients(leaf_distributions)
+                leaf_distributions = do_gradient * leaf_distributions + no_gradient * tf.stop_gradient(leaf_distributions)
 
             self.w_d_ensemble.append(decision_weights)
             self.w_l_ensemble.append(leaf_distributions)
-
-        self.trainable_weights = self.w_d_ensemble + self.w_l_ensemble
 
     def call(self, x, mask=None):
         N_DECISION = (2 ** (self.n_depth)) - 1  # Number of decision nodes
