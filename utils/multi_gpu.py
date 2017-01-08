@@ -7,17 +7,17 @@ import tensorflow as tf
 def make_parallel(model, gpu_count):
     def get_slice(data, idx, parts):
         shape = tf.shape(data)
-        size = tf.concat(0, [ shape[:1]/parts, shape[1:] ])
-        stride = tf.concat(0, [ shape[:1]/parts, shape[1:]*0 ])
+        size = tf.concat(0, [ shape[:1] // parts, shape[1:] ])
+        stride = tf.concat(0, [ shape[:1] // parts, shape[1:]*0 ])
         start = stride * idx
         return tf.slice(data, start, size)
 
     outputs_all = []
-    for i in xrange(len(model.outputs)):
+    for i in range(len(model.outputs)):
         outputs_all.append([])
 
     #Place a copy of the model on each GPU, each getting a slice of the batch
-    for i in xrange(gpu_count):
+    for i in range(gpu_count):
         with tf.device('/gpu:%d' % i):
             with tf.name_scope('tower_%d' % i) as scope:
 
@@ -34,7 +34,7 @@ def make_parallel(model, gpu_count):
                     outputs = [outputs]
                 
                 #Save all the outputs for merging back together later
-                for l in xrange(len(outputs)):
+                for l in range(len(outputs)):
                     outputs_all[l].append(outputs[l])
 
     # merge outputs on CPU
@@ -44,3 +44,4 @@ def make_parallel(model, gpu_count):
             merged.append(merge(outputs, mode='concat', concat_axis=0))
             
         return Model(input=model.inputs, output=merged)
+
